@@ -26,7 +26,11 @@ import { QrVerificationModal } from './QrVerificationModal.tsx';
 import { RescueLedgerModal } from './RescueLedgerModal.tsx';
 import { RescueMissionTracker } from './RescueMissionTracker.tsx';
 
-export const NgoDashboard: React.FC<{ onNavigateToMap: () => void }> = ({ onNavigateToMap }) => {
+export const NgoDashboard: React.FC<{
+  onNavigateToMap: () => void;
+  onOpenAiVerification?: (payload?: any) => void;
+  onOpenQualityAssurance?: () => void;
+}> = ({ onNavigateToMap, onOpenAiVerification, onOpenQualityAssurance }) => {
   const [donations, setDonations] = useState<FoodDonation[]>(appStore.getDonations());
   const [organizations, setOrganizations] = useState<Organization[]>(appStore.getOrganizations());
   const [needs, setNeeds] = useState<CommunityNeed[]>(appStore.getCommunityNeeds());
@@ -117,13 +121,26 @@ export const NgoDashboard: React.FC<{ onNavigateToMap: () => void }> = ({ onNavi
           </p>
         </div>
 
-        <button
-          onClick={() => setIsNeedModalOpen(true)}
-          className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all flex items-center justify-center space-x-2"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Broadcast Community Food Need</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onOpenQualityAssurance && (
+            <button
+              onClick={onOpenQualityAssurance}
+              className="px-4 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 font-bold text-xs flex items-center space-x-1.5 transition-colors shadow-2xs"
+              title="Open Food Quality Assurance Center"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Inspect Food QA</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsNeedModalOpen(true)}
+            className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all flex items-center justify-center space-x-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Broadcast Community Food Need</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -347,10 +364,32 @@ export const NgoDashboard: React.FC<{ onNavigateToMap: () => void }> = ({ onNavi
                     )}
                   </div>
 
-                  <div className="flex justify-end gap-2 text-xs">
+                  <div className="flex justify-end items-center gap-3 text-xs">
+                    {onOpenAiVerification && (
+                      <button
+                        onClick={() =>
+                          onOpenAiVerification({
+                            foodName: don.food_name,
+                            category: don.food_category,
+                            foodType: don.food_type,
+                            quantity: don.quantity,
+                            unit: don.unit,
+                            preparationTime: don.preparation_time,
+                            storageMethod: don.storage_method || 'Insulated container',
+                            temperatureC: don.temperature_c,
+                            dietaryNotes: don.dietary_label,
+                          })
+                        }
+                        className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 font-bold flex items-center space-x-1"
+                        title="AI Food Quality & Temperature Verification"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>AI Verify</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => setActiveLedgerDonation(don)}
-                      className="text-gray-500 hover:text-gray-800 flex items-center space-x-1"
+                      className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center space-x-1"
                     >
                       <FileCheck className="w-3.5 h-3.5 text-blue-500" />
                       <span>Digital Ledger</span>
@@ -359,7 +398,31 @@ export const NgoDashboard: React.FC<{ onNavigateToMap: () => void }> = ({ onNavi
                 </div>
               ) : don.status === 'PUBLISHED' ? (
                 <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Matched to your shelter capacity</span>
+                  <div className="flex items-center space-x-2">
+                    {onOpenAiVerification && (
+                      <button
+                        onClick={() =>
+                          onOpenAiVerification({
+                            foodName: don.food_name,
+                            category: don.food_category,
+                            foodType: don.food_type,
+                            quantity: don.quantity,
+                            unit: don.unit,
+                            preparationTime: don.preparation_time,
+                            storageMethod: don.storage_method || 'Insulated container',
+                            temperatureC: don.temperature_c,
+                            dietaryNotes: don.dietary_label,
+                          })
+                        }
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-bold flex items-center space-x-1 hover:bg-emerald-100 transition-colors"
+                        title="Run AI Freshness Audit before accepting"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>AI Check</span>
+                      </button>
+                    )}
+                    <span className="text-xs text-gray-500">Matched to your shelter capacity</span>
+                  </div>
                   <button
                     onClick={() => handleAcceptDonation(don.id)}
                     className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"

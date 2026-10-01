@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -157,47 +157,106 @@ export const analyzeFoodWithAi = (data: FoodVerificationPayload): VerificationRe
 };
 
 export const AiFoodVerificationAssistant: React.FC<AiFoodVerificationAssistantProps> = ({
-  foodData,
+  foodData: initialFoodData,
   onVerificationComplete,
   isOpen = true,
   onClose,
   embedded = false,
 }) => {
+  const [foodData, setFoodData] = useState<FoodVerificationPayload>(initialFoodData);
   const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<VerificationResult>(() => analyzeFoodWithAi(foodData));
-  const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(foodData.photoUrl || null);
-  const [hasRunVerification, setHasRunVerification] = useState(true);
+  const [result, setResult] = useState<VerificationResult>(() => analyzeFoodWithAi(initialFoodData));
+  const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(initialFoodData.photoUrl || null);
+  const [showTester, setShowTester] = useState(!embedded);
+
+  // Sync if initial prop changes
+  useEffect(() => {
+    setFoodData(initialFoodData);
+    setResult(analyzeFoodWithAi(initialFoodData));
+  }, [initialFoodData]);
 
   const handleSimulateInspectionPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = (event) => {
-        setUploadedPhoto(event.target?.result as string);
-        reAnalyze();
+        const photo = event.target?.result as string;
+        setUploadedPhoto(photo);
+        runReAnalysis({ ...foodData, photoUrl: photo });
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const reAnalyze = () => {
+  const runReAnalysis = (updatedData: FoodVerificationPayload) => {
     setAnalyzing(true);
+    setFoodData(updatedData);
     setTimeout(() => {
-      const res = analyzeFoodWithAi({
-        ...foodData,
-        photoUrl: uploadedPhoto || undefined,
-      });
+      const res = analyzeFoodWithAi(updatedData);
       setResult(res);
       setAnalyzing(false);
-      setHasRunVerification(true);
       if (onVerificationComplete) onVerificationComplete(res);
-    }, 700);
+    }, 450);
+  };
+
+  const applyPreset = (preset: 'hot_biryani' | 'dairy_milk' | 'danger_buffet' | 'bakery_bread') => {
+    let presetData: FoodVerificationPayload;
+    if (preset === 'hot_biryani') {
+      presetData = {
+        foodName: 'Hot Vegetable Biryani with Gravy',
+        category: 'Cooked Meal',
+        foodType: 'Vegetarian',
+        quantity: 80,
+        unit: 'Meals',
+        preparationTime: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
+        storageMethod: 'Stainless hot food insulated containers (>65°C)',
+        temperatureC: 68,
+        dietaryNotes: 'Vegetarian, Mild spice, Dairy (Ghee)',
+      };
+    } else if (preset === 'dairy_milk') {
+      presetData = {
+        foodName: 'Pasteurized Full Cream Milk & Paneer',
+        category: 'Dairy',
+        foodType: 'Vegetarian',
+        quantity: 35,
+        unit: 'Liters',
+        preparationTime: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+        storageMethod: 'Commercial chiller (<4°C)',
+        temperatureC: 4,
+        dietaryNotes: 'Contains Dairy / Lactose',
+      };
+    } else if (preset === 'danger_buffet') {
+      presetData = {
+        foodName: 'Banquet Hall Mixed Buffet Leftovers',
+        category: 'Cooked Meal',
+        foodType: 'Vegetarian',
+        quantity: 110,
+        unit: 'Meals',
+        preparationTime: new Date(Date.now() - 210 * 60 * 1000).toISOString(),
+        storageMethod: 'Room temperature open chaffing dishes',
+        temperatureC: 38,
+        dietaryNotes: 'Mixed buffet items, potentially exposed >3 hours',
+      };
+    } else {
+      presetData = {
+        foodName: 'Fresh Artisanal Bread Loaves & Buns',
+        category: 'Bakery',
+        foodType: 'Vegan',
+        quantity: 50,
+        unit: 'Packets',
+        preparationTime: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
+        storageMethod: 'Dry sealed kraft paper packaging',
+        temperatureC: 24,
+        dietaryNotes: 'Gluten (Wheat), Vegan',
+      };
+    }
+    runReAnalysis(presetData);
   };
 
   if (!isOpen) return null;
 
   const content = (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header Banner */}
       <div className="flex items-start justify-between bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 p-5 rounded-2xl border border-emerald-800/40 text-white">
         <div className="flex items-center space-x-3">
@@ -220,16 +279,91 @@ export const AiFoodVerificationAssistant: React.FC<AiFoodVerificationAssistantPr
           </div>
         </div>
 
-        {onClose && !embedded && (
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
-            title="Close Assistant"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <div className="flex items-center space-x-2">
+          {!embedded && (
+            <button
+              onClick={() => setShowTester((p) => !p)}
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-800/40 hover:bg-emerald-700/60 text-emerald-200 border border-emerald-600/40 font-semibold transition-colors"
+            >
+              {showTester ? 'Hide Simulator' : 'Test Food Batch'}
+            </button>
+          )}
+          {onClose && !embedded && (
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              title="Close Assistant"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Interactive Food Tester Simulator Bar */}
+      {showTester && (
+        <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-slate-800/80 border border-emerald-200 dark:border-slate-700 space-y-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Interactive Verification Simulator (Try Test Batches):</span>
+            </span>
+            <span className="text-[10px] text-gray-500">Live parameter re-analysis</span>
+          </div>
+
+          {/* Quick Presets */}
+          <div className="flex flex-wrap gap-2 text-xs">
+            <button
+              onClick={() => applyPreset('hot_biryani')}
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 hover:bg-emerald-50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-600 font-semibold text-[11px] transition-all"
+            >
+              🔥 Hot Biryani (68°C)
+            </button>
+            <button
+              onClick={() => applyPreset('dairy_milk')}
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 hover:bg-emerald-50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-600 font-semibold text-[11px] transition-all"
+            >
+              ❄️ Chilled Dairy (4°C)
+            </button>
+            <button
+              onClick={() => applyPreset('danger_buffet')}
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 hover:bg-rose-50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-600 font-semibold text-[11px] transition-all"
+            >
+              ⚠️ Danger Buffet (38°C)
+            </button>
+            <button
+              onClick={() => applyPreset('bakery_bread')}
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 hover:bg-emerald-50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-600 font-semibold text-[11px] transition-all"
+            >
+              🍞 Bakery Loaves (24°C)
+            </button>
+          </div>
+
+          {/* Live Temperature Slider */}
+          <div className="space-y-1 pt-1 border-t border-emerald-100 dark:border-slate-700">
+            <div className="flex justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
+              <span className="flex items-center space-x-1">
+                <Thermometer className="w-3.5 h-3.5 text-amber-500" />
+                <span>Probe Temperature: {foodData.temperatureC !== undefined ? `${foodData.temperatureC}°C` : '65°C'}</span>
+              </span>
+              <span className="text-[10px] text-gray-400">
+                Safe zones: &gt;60°C Hot or &lt;5°C Cold
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="90"
+              value={foodData.temperatureC ?? 65}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                runReAnalysis({ ...foodData, temperatureC: val });
+              }}
+              className="w-full accent-emerald-600 cursor-pointer h-1.5 bg-gray-200 rounded-lg"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Verification Card */}
       {analyzing ? (

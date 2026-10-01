@@ -27,6 +27,8 @@ import {
   User,
   Volunteer,
   AppNotification,
+  FoodQualityAssessment,
+  UserRole,
 } from '../types/index.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,6 +45,7 @@ export interface DatabaseSchema {
   notifications: AppNotification[];
   auditLogs: AuditEvent[];
   analytics: PlatformAnalytics;
+  qualityAssessments: FoodQualityAssessment[];
   lastResetAt: string;
 }
 
@@ -225,15 +228,97 @@ class DatabaseService {
       };
     });
 
+    const initialAssessments: FoodQualityAssessment[] = enhancedDonations.map((d, idx) => {
+      const now = new Date();
+      const prep = new Date(d.preparation_time || now.toISOString());
+      const ageHours = Math.round((Math.max(0, now.getTime() - prep.getTime()) / (3600 * 1000)) * 10) / 10;
+      const isOver24 = ageHours >= 24;
+
+      return {
+        id: `qa-init-${d.id}`,
+        donationId: d.id,
+        foodName: d.food_name,
+        category: d.food_category,
+        foodType: d.food_type,
+        rawOrCooked: 'Cooked' as const,
+        totalWeight: d.quantity,
+        weightUnit: d.unit,
+        containerCount: 2,
+        containerType: 'Insulated stainless thermal containers',
+        ingredients: [
+          { id: 'ing-1', name: `${d.food_name} Primary Base`, quantity: Math.round(d.quantity * 0.6), unit: d.unit },
+          { id: 'ing-2', name: 'Fresh Vegetables & Spices', quantity: Math.round(d.quantity * 0.4), unit: d.unit },
+        ],
+        preparedAt: d.preparation_time,
+        assessedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        foodAgeHours: ageHours,
+        is24HourExceeded: isOver24,
+        storageMethod: d.storage_method || 'Hot Holding',
+        storageTemperature: d.temperature_c || 65,
+        temperatureUnit: 'C' as const,
+        storageDurationHours: ageHours,
+        packagingCondition: 'Covered' as const,
+        handlingStatus: 'Properly handled' as const,
+        potentialAllergens: d.food_name.toLowerCase().includes('paneer') || d.food_name.toLowerCase().includes('biryani') ? ['Milk / Dairy (Lactose)'] : [],
+        estimatedServingsMin: Math.max(1, Math.floor(d.estimated_meals * 0.85)),
+        estimatedServingsMax: Math.ceil(d.estimated_meals * 1.15),
+        servingBreakdown: [
+          {
+            itemName: d.food_name,
+            quantity: d.quantity,
+            unit: d.unit,
+            estimatedPortionsMin: Math.max(1, Math.floor(d.estimated_meals * 0.85)),
+            estimatedPortionsMax: Math.ceil(d.estimated_meals * 1.15),
+          },
+        ],
+        servingEstimationAssumptions: [
+          `Calculated for ${d.food_category} based on average meal portions (~350g/meal)`,
+          'Portions exclude container tare weight',
+          'Actual servings may vary depending on serving size and accompaniments',
+        ],
+        assessmentStatus: idx === 0 ? 'VERIFIED' : idx === 1 ? 'CAUTION' : 'VERIFIED',
+        riskFactors: isOver24 ? ['Food age exceeds 24-hour baseline. Secondary verification recommended.'] : [],
+        missingInformation: [],
+        aiExplanation: 'Based on the structured food parameters and holding temperature (>60°C), this batch meets redistribution screening standards.',
+        checklist: [
+          { id: 'chk-1', category: 'Preparation', label: 'Preparation date recorded', checked: true, timestamp: new Date().toISOString() },
+          { id: 'chk-2', category: 'Preparation', label: 'Preparation time recorded', checked: true, timestamp: new Date().toISOString() },
+          { id: 'chk-3', category: 'Preparation', label: 'Food identity verified', checked: true, timestamp: new Date().toISOString() },
+          { id: 'chk-4', category: 'Storage', label: 'Storage method recorded', checked: true, timestamp: new Date().toISOString() },
+          { id: 'chk-5', category: 'Storage', label: 'Temperature recorded', checked: true, timestamp: new Date().toISOString() },
+          { id: 'chk-6', category: 'Handling', label: 'No visible contamination', checked: true, timestamp: new Date().toISOString() },
+          { id: 'chk-7', category: 'Allergen', label: 'Ingredients recorded', checked: true, timestamp: new Date().toISOString() },
+        ],
+        verifiedBy: 'Dr. Anand Joshi (FSSAI Certified Safety Officer)',
+        verifiedAt: new Date().toISOString(),
+        verificationRole: 'admin' as const,
+        verificationStatus: 'VERIFIED',
+        isAiGenerated: true,
+        confidenceScore: 92,
+        createdAt: d.created_at,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    // Attach QA to enhanced donations
+    const donationsWithQa = enhancedDonations.map((d) => {
+      const matchedQa = initialAssessments.find((q) => q.donationId === d.id);
+      return {
+        ...d,
+        quality_assessment: matchedQa,
+      };
+    });
+
     return {
       users: [...INITIAL_USERS],
-      donations: enhancedDonations,
+      donations: donationsWithQa,
       organizations: [...INITIAL_ORGANIZATIONS],
       volunteers: [...INITIAL_VOLUNTEERS],
       needs: [...INITIAL_NEEDS],
       notifications: [...INITIAL_NOTIFICATIONS],
       auditLogs: [...INITIAL_AUDIT_LOGS],
       analytics: { ...INITIAL_ANALYTICS },
+      qualityAssessments: initialAssessments,
       lastResetAt: new Date().toISOString(),
     };
   }
@@ -248,6 +333,9 @@ class DatabaseService {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
         if (parsed.donations && parsed.users && parsed.organizations) {
+          if (!parsed.qualityAssessments) {
+            parsed.qualityAssessments = this.getInitialData().qualityAssessments;
+          }
           return parsed;
         }
       }
@@ -745,6 +833,134 @@ class DatabaseService {
       this.data.auditLogs = this.data.auditLogs.slice(0, 200);
     }
     this.saveData();
+  }
+
+  // --- Food Quality Assurance ---
+  public getQualityAssessments(): FoodQualityAssessment[] {
+    return this.data.qualityAssessments || [];
+  }
+
+  public getQualityAssessmentById(id: string): FoodQualityAssessment | undefined {
+    return (this.data.qualityAssessments || []).find((qa) => qa.id === id);
+  }
+
+  public getQualityAssessmentByDonationId(donationId: string): FoodQualityAssessment | undefined {
+    return (this.data.qualityAssessments || []).find((qa) => qa.donationId === donationId);
+  }
+
+  public saveQualityAssessment(assessment: FoodQualityAssessment): FoodQualityAssessment {
+    if (!this.data.qualityAssessments) {
+      this.data.qualityAssessments = [];
+    }
+    const idx = this.data.qualityAssessments.findIndex((qa) => qa.id === assessment.id || (assessment.donationId && qa.donationId === assessment.donationId));
+    if (idx >= 0) {
+      this.data.qualityAssessments[idx] = {
+        ...this.data.qualityAssessments[idx],
+        ...assessment,
+        updatedAt: new Date().toISOString(),
+      };
+      assessment = this.data.qualityAssessments[idx];
+    } else {
+      this.data.qualityAssessments.unshift(assessment);
+    }
+
+    // Synchronize status back to donation if donation exists
+    if (assessment.donationId) {
+      const donation = this.data.donations.find((d) => d.id === assessment.donationId);
+      if (donation) {
+        donation.quality_assessment = assessment;
+        if (assessment.assessmentStatus === 'VERIFIED') {
+          donation.safety_status = 'VERIFIED';
+        } else if (assessment.assessmentStatus === 'SAFETY_HOLD') {
+          donation.safety_status = 'FLAGGED';
+        } else if (assessment.assessmentStatus === 'EXPIRED') {
+          donation.status = 'EXPIRED';
+          donation.safety_status = 'REJECTED';
+        }
+      }
+    }
+
+    this.logAuditEvent({
+      actor: assessment.verifiedBy || 'FoodBridge QA System',
+      role: (assessment.verificationRole as UserRole) || 'admin',
+      action: 'QA_ASSESSMENT_RECORDED',
+      entity: 'FoodQualityAssessment',
+      entity_id: assessment.id,
+      status: 'SUCCESS',
+      details: `Food Quality Assessment recorded for ${assessment.foodName}: status ${assessment.assessmentStatus}, ${assessment.estimatedServingsMin}-${assessment.estimatedServingsMax} servings`,
+    });
+
+    this.saveData();
+    return assessment;
+  }
+
+  public verifyQualityAssessment(
+    id: string,
+    verifier: { name: string; role: UserRole }
+  ): FoodQualityAssessment | null {
+    const qa = (this.data.qualityAssessments || []).find((q) => q.id === id || q.donationId === id);
+    if (!qa) return null;
+
+    qa.assessmentStatus = 'VERIFIED';
+    qa.verifiedBy = verifier.name;
+    qa.verificationRole = verifier.role;
+    qa.verificationStatus = 'VERIFIED';
+    qa.verifiedAt = new Date().toISOString();
+    qa.updatedAt = new Date().toISOString();
+
+    if (qa.donationId) {
+      const donation = this.data.donations.find((d) => d.id === qa.donationId);
+      if (donation) {
+        donation.safety_status = 'VERIFIED';
+        donation.quality_assessment = qa;
+      }
+    }
+
+    this.logAuditEvent({
+      actor: verifier.name,
+      role: verifier.role,
+      action: 'QA_VERIFIED',
+      entity: 'FoodQualityAssessment',
+      entity_id: qa.id,
+      status: 'SUCCESS',
+      details: `Food quality verified and approved for matching by ${verifier.name} (${verifier.role})`,
+    });
+
+    this.saveData();
+    return qa;
+  }
+
+  public holdQualityAssessment(id: string, reason: string): FoodQualityAssessment | null {
+    const qa = (this.data.qualityAssessments || []).find((q) => q.id === id || q.donationId === id);
+    if (!qa) return null;
+
+    qa.assessmentStatus = 'SAFETY_HOLD';
+    if (!qa.riskFactors.includes(reason)) {
+      qa.riskFactors.push(reason);
+    }
+    qa.aiExplanation = `Safety Hold Placed: ${reason}. Distribution temporarily restricted.`;
+    qa.updatedAt = new Date().toISOString();
+
+    if (qa.donationId) {
+      const donation = this.data.donations.find((d) => d.id === qa.donationId);
+      if (donation) {
+        donation.safety_status = 'FLAGGED';
+        donation.quality_assessment = qa;
+      }
+    }
+
+    this.logAuditEvent({
+      actor: 'FoodBridge Safety Auditor',
+      role: 'admin',
+      action: 'QA_SAFETY_HOLD',
+      entity: 'FoodQualityAssessment',
+      entity_id: qa.id,
+      status: 'WARNING',
+      details: `Donation placed on SAFETY HOLD: ${reason}`,
+    });
+
+    this.saveData();
+    return qa;
   }
 
   // --- Analytics ---

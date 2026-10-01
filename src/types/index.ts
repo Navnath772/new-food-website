@@ -1,16 +1,105 @@
 export type UserRole = 'donor' | 'ngo' | 'volunteer' | 'admin';
 
 export type FoodCategory =
+  | 'Rice'
+  | 'Roti / Chapati'
+  | 'Dal'
+  | 'Sabzi'
+  | 'Curry'
+  | 'Biryani'
+  | 'Pulao'
+  | 'Bread'
+  | 'Fruits'
+  | 'Vegetables'
+  | 'Dairy'
+  | 'Snacks'
+  | 'Sweets'
+  | 'Packaged Food'
   | 'Cooked Meal'
   | 'Raw Food'
   | 'Bakery'
-  | 'Fruits'
-  | 'Vegetables'
-  | 'Packaged Food'
-  | 'Dairy'
   | 'Other';
 
-export type FoodType = 'Vegetarian' | 'Vegan' | 'Non-Vegetarian';
+export type FoodType = 'Vegetarian' | 'Vegan' | 'Non-Vegetarian' | 'Egg';
+
+export type RawCookedStatus = 'Cooked' | 'Raw' | 'Ready-to-Eat';
+
+export type FoodQualityStatus =
+  | 'DRAFT'
+  | 'ANALYSIS_PENDING'
+  | 'INCOMPLETE'
+  | 'CAUTION'
+  | 'SAFETY_REVIEW'
+  | 'VERIFIED'
+  | 'SAFETY_HOLD'
+  | 'EXPIRED';
+
+export interface Ingredient {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  optional?: boolean;
+}
+
+export interface ServingBreakdownItem {
+  itemName: string;
+  quantity: number;
+  unit: string;
+  estimatedPortionsMin: number;
+  estimatedPortionsMax: number;
+}
+
+export interface SafetyChecklistItem {
+  id: string;
+  category: 'Preparation' | 'Storage' | 'Handling' | 'Allergen' | 'Pickup';
+  label: string;
+  checked: boolean;
+  timestamp?: string;
+  verifiedBy?: string;
+}
+
+export interface FoodQualityAssessment {
+  id: string;
+  donationId: string;
+  foodName: string;
+  category: FoodCategory;
+  foodType: FoodType;
+  rawOrCooked: RawCookedStatus;
+  totalWeight: number;
+  weightUnit: string;
+  containerCount: number;
+  containerType: string;
+  ingredients: Ingredient[];
+  preparedAt: string;
+  assessedAt: string;
+  foodAgeHours: number;
+  is24HourExceeded: boolean;
+  storageMethod: string;
+  storageTemperature?: number;
+  temperatureUnit?: 'C' | 'F';
+  storageDurationHours?: number;
+  packagingCondition: 'Sealed' | 'Covered' | 'Open' | 'Damaged' | 'Unknown';
+  handlingStatus: 'Properly handled' | 'Uncertain' | 'Improper handling suspected';
+  potentialAllergens: string[];
+  estimatedServingsMin: number;
+  estimatedServingsMax: number;
+  servingBreakdown?: ServingBreakdownItem[];
+  servingEstimationAssumptions?: string[];
+  assessmentStatus: FoodQualityStatus;
+  riskFactors: string[];
+  missingInformation: string[];
+  aiExplanation: string;
+  checklist?: SafetyChecklistItem[];
+  verifiedBy?: string;
+  verifiedAt?: string;
+  verificationRole?: UserRole;
+  verificationStatus?: string;
+  isAiGenerated?: boolean;
+  confidenceScore?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type DonationStatus =
   | 'PUBLISHED'
@@ -96,6 +185,7 @@ export interface FoodDonation {
   food_rescue_score_breakdown?: FoodRescueScoreBreakdown;
   custody_ledger?: CustodyEvent[];
   qr_token?: string;
+  quality_assessment?: FoodQualityAssessment;
   created_at: string;
 }
 

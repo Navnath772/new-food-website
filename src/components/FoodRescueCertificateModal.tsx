@@ -232,6 +232,58 @@ export const FoodRescueCertificateModal: React.FC<FoodRescueCertificateModalProp
             </p>
           </div>
         </div>
+
+        {/* Modal Bottom Footer Actions */}
+        <div className="bg-slate-50 dark:bg-slate-800/90 px-6 py-4 border-t border-gray-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 print:hidden">
+          <div className="flex items-center space-x-2">
+            {certQrUrl && (
+              <a
+                href={certQrUrl}
+                download={`${certId}-qr.png`}
+                className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 hover:bg-gray-100 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-600 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs"
+                title="Download Verification QR Image"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Download QR (.png)</span>
+              </a>
+            )}
+            <button
+              onClick={() => {
+                const summary = `========================================\nFOOD RESCUE IMPACT CERTIFICATE\nUN SDG 2 - Zero Hunger Partner\n========================================\nRecipient: ${resolvedDonor.organization || resolvedDonor.name}\nCertificate ID: ${certId}\nDate: ${new Date().toLocaleDateString()}\n\nIMPACT ACHIEVEMENTS:\n- Meals Rescued: ${resolvedMetrics.mealsRescued.toLocaleString()}\n- Food Diverted: ${resolvedMetrics.kgSaved.toLocaleString()} kg\n- CO2e Avoided: ${resolvedMetrics.co2eAvoided.toLocaleString()} kg\n\nAuthority: FoodBridge AI Community Council\nVerified Platform Node #2026\n========================================`;
+                const blob = new Blob([summary], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${certId}-record.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 hover:bg-gray-100 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-600 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-2xs"
+              title="Download text audit record"
+            >
+              <Download className="w-3.5 h-3.5 text-teal-600" />
+              <span>Export Record (.txt)</span>
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handlePrint}
+              className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center space-x-1.5 transition-colors shadow-sm"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print / Save PDF</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-xl bg-gray-200 dark:bg-slate-700 hover:bg-rose-500 hover:text-white text-gray-800 dark:text-gray-200 text-xs font-bold transition-all"
+            >
+              Close Certificate
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

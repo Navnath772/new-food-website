@@ -14,12 +14,21 @@ import { JuryQaModal } from './components/JuryQaModal.tsx';
 import { CommandPalette } from './components/CommandPalette.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
 import { NotificationCenterModal } from './components/NotificationCenterModal.tsx';
+import { TrackOrderModal } from './components/TrackOrderModal.tsx';
+import { AiFoodVerificationAssistant, FoodVerificationPayload } from './components/AiFoodVerificationAssistant.tsx';
+import { FoodQualityAssurance } from './components/FoodQualityAssurance.tsx';
 import { adminApi, appStore } from './services/api.ts';
 import { Globe, HeartHandshake, ShieldCheck, Sparkles, Utensils } from 'lucide-react';
-import { User, UserRole } from './types/index.ts';
+import { User, UserRole, FoodDonation } from './types/index.ts';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<string>('home');
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    try {
+      const p = window.location.pathname.toLowerCase();
+      if (p.includes('quality-assurance') || p.includes('qa')) return 'qa';
+    } catch {}
+    return 'home';
+  });
   const [isDonationWizardOpen, setIsDonationWizardOpen] = useState<boolean>(false);
   const [wizardInitialData, setWizardInitialData] = useState<any>(undefined);
   const [isSimulationOpen, setIsSimulationOpen] = useState<boolean>(false);
@@ -28,8 +37,36 @@ export default function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
+  const [isTrackOrderOpen, setIsTrackOrderOpen] = useState<boolean>(false);
+  const [trackingDonation, setTrackingDonation] = useState<FoodDonation | null>(null);
   const [focusedMapDonationId, setFocusedMapDonationId] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isAiVerificationOpen, setIsAiVerificationOpen] = useState<boolean>(false);
+  const [aiVerificationPayload, setAiVerificationPayload] = useState<FoodVerificationPayload | null>(null);
+
+  // Sync /quality-assurance URL
+  const handleSelectTab = (tab: string) => {
+    setCurrentTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      if (tab === 'qa') {
+        window.history.pushState({}, '', '/quality-assurance');
+      } else if (window.location.pathname === '/quality-assurance') {
+        window.history.pushState({}, '', '/');
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = window.location.pathname.toLowerCase();
+      if (p.includes('quality-assurance') || p.includes('qa')) {
+        setCurrentTab('qa');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Dark Mode State
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -77,6 +114,32 @@ export default function App() {
     setIsDonationWizardOpen(true);
   };
 
+  const handleOpenTrackOrder = (donation?: FoodDonation) => {
+    const list = appStore.getDonations();
+    const active =
+      donation ||
+      list.find((d) => d.status === 'IN_TRANSIT' || d.status === 'VOLUNTEER_ASSIGNED' || d.status === 'PICKED_UP') ||
+      list[0];
+    setTrackingDonation(active || null);
+    setIsTrackOrderOpen(true);
+  };
+
+  const handleOpenAiVerification = (payload?: Partial<FoodVerificationPayload>) => {
+    setAiVerificationPayload({
+      foodName: payload?.foodName || 'Hot Vegetable Biryani with Gravy',
+      category: payload?.category || 'Cooked Meal',
+      foodType: payload?.foodType || 'Vegetarian',
+      quantity: payload?.quantity || 75,
+      unit: payload?.unit || 'Meals',
+      preparationTime: payload?.preparationTime || new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+      storageMethod: payload?.storageMethod || 'Insulated hot food warmer container (>65°C)',
+      temperatureC: payload?.temperatureC !== undefined ? payload.temperatureC : 65,
+      dietaryNotes: payload?.dietaryNotes || 'Vegetarian, Mild spice, Dairy (Ghee)',
+      photoUrl: payload?.photoUrl,
+    });
+    setIsAiVerificationOpen(true);
+  };
+
   const handleSelectUser = (user: User) => {
     appStore.setCurrentUser(user);
     showToast(`Switched account to ${user.name} (${user.role.toUpperCase()})`);
@@ -117,17 +180,16 @@ export default function App() {
       {/* Main Navbar */}
       <Navbar
         currentTab={currentTab}
-        onSelectTab={(tab) => {
-          setCurrentTab(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
+        onSelectTab={handleSelectTab}
         onOpenDonationWizard={() => handleOpenDonationWizardWithData()}
         onOpenSimulation={() => setIsSimulationOpen(true)}
         onOpenPresentation={() => setIsPresentationOpen(true)}
         onOpenJuryQa={() => setIsJuryQaOpen(true)}
+        onOpenTrackOrder={() => handleOpenTrackOrder()}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
+        onOpenAiVerification={() => handleOpenAiVerification()}
         isDark={isDark}
         onToggleDark={() => setIsDark((prev) => !prev)}
         onResetDemo={handleResetDemo}
@@ -139,7 +201,14 @@ export default function App() {
           <HeroSection
             onOpenDonationWizard={() => handleOpenDonationWizardWithData()}
             onOpenSimulation={() => setIsSimulationOpen(true)}
-            onNavigateToTab={(tab) => setCurrentTab(tab)}
+            onNavigateToTab={(tab) => handleSelectTab(tab)}
+          />
+        )}
+
+        {currentTab === 'qa' && (
+          <FoodQualityAssurance
+            onNavigateToWizard={(prefill) => handleOpenDonationWizardWithData(prefill)}
+            onNavigateToTab={(tab) => handleSelectTab(tab)}
           />
         )}
 
@@ -147,19 +216,26 @@ export default function App() {
           <DonorDashboard
             onOpenDonationWizard={(data) => handleOpenDonationWizardWithData(data)}
             onOpenLiveMapForDonation={handleOpenMapForDonation}
+            onOpenAiVerification={handleOpenAiVerification}
+            onOpenQualityAssurance={() => handleSelectTab('qa')}
           />
         )}
 
         {currentTab === 'ngo' && (
-          <NgoDashboard onNavigateToMap={() => setCurrentTab('map')} />
+          <NgoDashboard
+            onNavigateToMap={() => handleSelectTab('map')}
+            onOpenAiVerification={handleOpenAiVerification}
+            onOpenQualityAssurance={() => handleSelectTab('qa')}
+          />
         )}
 
         {currentTab === 'volunteer' && (
           <VolunteerDashboard
             onNavigateToMap={(donationId) => {
               if (donationId) setFocusedMapDonationId(donationId);
-              setCurrentTab('map');
+              handleSelectTab('map');
             }}
+            onOpenQualityAssurance={() => handleSelectTab('qa')}
           />
         )}
 
@@ -168,7 +244,10 @@ export default function App() {
         )}
 
         {currentTab === 'admin' && (
-          <AdminCommandCenter onNavigateToMap={() => setCurrentTab('map')} />
+          <AdminCommandCenter
+            onNavigateToMap={() => handleSelectTab('map')}
+            onOpenQualityAssurance={() => handleSelectTab('qa')}
+          />
         )}
 
         {currentTab === 'impact' && <ImpactDashboard />}
@@ -184,8 +263,9 @@ export default function App() {
         }}
         onSuccess={() => {
           showToast('Surplus Food Published! AI Matching Engine is allocating nearest NGO.');
-          setCurrentTab('donor');
+          handleSelectTab('donor');
         }}
+        onOpenQualityAssurance={() => handleSelectTab('qa')}
       />
 
       <SimulationModal
@@ -212,6 +292,7 @@ export default function App() {
         onOpenSimulation={() => setIsSimulationOpen(true)}
         onOpenPresentation={() => setIsPresentationOpen(true)}
         onOpenJuryQa={() => setIsJuryQaOpen(true)}
+        onOpenAiVerification={() => handleOpenAiVerification()}
         onResetDemo={handleResetDemo}
         isDark={isDark}
         onToggleDark={() => setIsDark((prev) => !prev)}
@@ -233,6 +314,35 @@ export default function App() {
         onMarkRead={(id) => appStore.markNotificationAsRead(id)}
         onMarkAllRead={() => appStore.markAllNotificationsAsRead()}
         onNavigateToTab={(tab) => setCurrentTab(tab)}
+      />
+
+      <TrackOrderModal
+        isOpen={isTrackOrderOpen}
+        onClose={() => setIsTrackOrderOpen(false)}
+        donation={trackingDonation}
+        onOpenMap={(id) => handleOpenMapForDonation(id)}
+      />
+
+      {/* Standalone AI Food Verification Assistant Modal */}
+      <AiFoodVerificationAssistant
+        isOpen={isAiVerificationOpen}
+        onClose={() => setIsAiVerificationOpen(false)}
+        foodData={
+          aiVerificationPayload || {
+            foodName: 'Hot Vegetable Biryani with Gravy',
+            category: 'Cooked Meal',
+            foodType: 'Vegetarian',
+            quantity: 75,
+            unit: 'Meals',
+            preparationTime: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+            storageMethod: 'Insulated hot food warmer container (>65°C)',
+            temperatureC: 65,
+            dietaryNotes: 'Vegetarian, Mild spice, Dairy (Ghee)',
+          }
+        }
+        onVerificationComplete={(res) => {
+          showToast(`AI Quality Scan: ${res.passed ? 'PASSED (FSSAI Safe)' : 'ACTION REQUIRED'} (Score: ${res.score}/100)`);
+        }}
       />
 
       {/* Footer */}

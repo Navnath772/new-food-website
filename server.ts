@@ -3,6 +3,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { db } from './src/server/db.ts';
+import {
+  analyzeFoodQualityWithGemini,
+  calculateRuleBasedQualityAssessment,
+  QualityAnalysisRequestPayload,
+} from './server/services/geminiFoodAnalysis.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -201,6 +206,65 @@ app.post('/api/safety-check', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     message: 'Food safety declaration logged into immutable custody ledger.',
   });
+});
+
+// 5B. Food Quality Assurance Center (AI-Assisted Quality, Servings & Safety Assessment)
+app.post('/api/quality-assurance/analyze', async (req: Request, res: Response) => {
+  try {
+    const payload = req.body as QualityAnalysisRequestPayload;
+    if (!payload.foodName) {
+      return res.status(400).json({ success: false, error: { message: 'Food name is required for QA analysis.' } });
+    }
+    const assessment = await analyzeFoodQualityWithGemini(payload);
+    return res.json({ success: true, assessment });
+  } catch (error: any) {
+    console.error('QA analysis endpoint error:', error);
+    const fallback = calculateRuleBasedQualityAssessment(req.body);
+    return res.json({ success: true, assessment: fallback, warning: 'Calculated using deterministic engine.' });
+  }
+});
+
+app.get('/api/quality-assurance/assessments', (_req: Request, res: Response) => {
+  const assessments = db.getQualityAssessments();
+  return res.json({ success: true, count: assessments.length, assessments });
+});
+
+app.get('/api/quality-assurance/assessments/:id', (req: Request, res: Response) => {
+  const assessment = db.getQualityAssessmentById(req.params.id) || db.getQualityAssessmentByDonationId(req.params.id);
+  if (!assessment) {
+    return res.status(404).json({ success: false, error: { message: 'Quality assessment not found' } });
+  }
+  return res.json({ success: true, assessment });
+});
+
+app.post('/api/quality-assurance/assessments', (req: Request, res: Response) => {
+  try {
+    const saved = db.saveQualityAssessment(req.body);
+    return res.status(201).json({ success: true, assessment: saved });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: { message: error.message } });
+  }
+});
+
+app.post('/api/quality-assurance/assessments/:id/verify', (req: Request, res: Response) => {
+  const { verifierName, verifierRole } = req.body;
+  const verified = db.verifyQualityAssessment(req.params.id, {
+    name: verifierName || 'Safety Officer',
+    role: verifierRole || 'admin',
+  });
+  if (!verified) {
+    return res.status(404).json({ success: false, error: { message: 'Assessment record not found' } });
+  }
+  return res.json({ success: true, assessment: verified });
+});
+
+app.post('/api/quality-assurance/assessments/:id/hold', (req: Request, res: Response) => {
+  const { reason } = req.body;
+  const updated = db.holdQualityAssessment(req.params.id, reason || 'Manual safety hold placed by auditor');
+  if (!updated) {
+    return res.status(404).json({ success: false, error: { message: 'Assessment record not found' } });
+  }
+  return res.json({ success: true, assessment: updated });
 });
 
 // 6. Community Needs Board

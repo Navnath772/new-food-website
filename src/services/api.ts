@@ -12,6 +12,7 @@ import {
   User,
   UserRole,
   Volunteer,
+  FoodQualityAssessment,
 } from '../types/index.ts';
 import {
   calculateCO2eAvoided,
@@ -42,6 +43,7 @@ const STORAGE_KEYS = {
   NEEDS: 'foodbridge_needs_v2',
   AUDIT: 'foodbridge_audit_v2',
   ANALYTICS: 'foodbridge_analytics_v2',
+  QUALITY_ASSESSMENTS: 'foodbridge_quality_assessments_v2',
 };
 
 // --- HTTP Client Helper ---
@@ -251,6 +253,80 @@ export const needsApi = {
   },
 };
 
+export const qualityApi = {
+  async analyze(payload: any): Promise<FoodQualityAssessment> {
+    try {
+      const res = await request<{ success: boolean; assessment: FoodQualityAssessment }>('/api/quality-assurance/analyze', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return res.assessment;
+    } catch {
+      return appStore.calculateLocalQualityAssessment(payload);
+    }
+  },
+
+  async getAssessments(): Promise<FoodQualityAssessment[]> {
+    try {
+      const res = await request<{ success: boolean; assessments: FoodQualityAssessment[] }>('/api/quality-assurance/assessments');
+      if (res.assessments && res.assessments.length > 0) {
+        res.assessments.forEach((qa) => appStore.saveQualityAssessment(qa, false));
+      }
+      return res.assessments || appStore.getQualityAssessments();
+    } catch {
+      return appStore.getQualityAssessments();
+    }
+  },
+
+  async getAssessmentById(id: string): Promise<FoodQualityAssessment | null> {
+    try {
+      const res = await request<{ success: boolean; assessment: FoodQualityAssessment }>(`/api/quality-assurance/assessments/${id}`);
+      return res.assessment;
+    } catch {
+      return appStore.getQualityAssessmentById(id) || null;
+    }
+  },
+
+  async saveAssessment(assessment: FoodQualityAssessment): Promise<FoodQualityAssessment> {
+    try {
+      const res = await request<{ success: boolean; assessment: FoodQualityAssessment }>('/api/quality-assurance/assessments', {
+        method: 'POST',
+        body: JSON.stringify(assessment),
+      });
+      appStore.saveQualityAssessment(res.assessment);
+      return res.assessment;
+    } catch {
+      return appStore.saveQualityAssessment(assessment);
+    }
+  },
+
+  async verifyAssessment(id: string, verifierName?: string, verifierRole?: UserRole): Promise<FoodQualityAssessment> {
+    try {
+      const res = await request<{ success: boolean; assessment: FoodQualityAssessment }>(`/api/quality-assurance/assessments/${id}/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ verifierName, verifierRole }),
+      });
+      appStore.saveQualityAssessment(res.assessment);
+      return res.assessment;
+    } catch {
+      return appStore.verifyQualityAssessment(id, verifierName, verifierRole);
+    }
+  },
+
+  async holdAssessment(id: string, reason: string): Promise<FoodQualityAssessment> {
+    try {
+      const res = await request<{ success: boolean; assessment: FoodQualityAssessment }>(`/api/quality-assurance/assessments/${id}/hold`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+      appStore.saveQualityAssessment(res.assessment);
+      return res.assessment;
+    } catch {
+      return appStore.holdQualityAssessment(id, reason);
+    }
+  },
+};
+
 export const notificationApi = {
   async getNotifications(userId?: string): Promise<AppNotification[]> {
     try {
@@ -337,6 +413,7 @@ class AppStore {
   private needs: CommunityNeed[];
   private auditLogs: AuditEvent[];
   private analytics: PlatformAnalytics;
+  private qualityAssessments: FoodQualityAssessment[] = [];
   private listeners: Set<() => void> = new Set();
 
   constructor() {
@@ -345,6 +422,7 @@ class AppStore {
     this.volunteers = this.loadFromStorage(STORAGE_KEYS.VOLUNTEERS, INITIAL_VOLUNTEERS);
     this.donations = this.loadFromStorage(STORAGE_KEYS.DONATIONS, INITIAL_DONATIONS);
     this.notifications = this.loadFromStorage(STORAGE_KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS);
+    this.qualityAssessments = this.loadFromStorage(STORAGE_KEYS.QUALITY_ASSESSMENTS, []);
     this.needs = this.loadFromStorage(STORAGE_KEYS.NEEDS, [
       {
         id: 'need-1',
@@ -952,6 +1030,163 @@ class AppStore {
     return this.analytics;
   }
 
+  // --- Food Quality Assurance ---
+  public getQualityAssessments(): FoodQualityAssessment[] {
+    return this.qualityAssessments;
+  }
+
+  public getQualityAssessmentById(id: string): FoodQualityAssessment | null {
+    return this.qualityAssessments.find((qa) => qa.id === id || qa.donationId === id) || null;
+  }
+
+  public saveQualityAssessment(assessment: FoodQualityAssessment, notifyListeners = true): FoodQualityAssessment {
+    const idx = this.qualityAssessments.findIndex(
+      (qa) => qa.id === assessment.id || (assessment.donationId && qa.donationId === assessment.donationId)
+    );
+    if (idx >= 0) {
+      this.qualityAssessments[idx] = {
+        ...this.qualityAssessments[idx],
+        ...assessment,
+        updatedAt: new Date().toISOString(),
+      };
+      assessment = this.qualityAssessments[idx];
+    } else {
+      this.qualityAssessments.unshift(assessment);
+    }
+    this.saveToStorage(STORAGE_KEYS.QUALITY_ASSESSMENTS, this.qualityAssessments);
+    if (notifyListeners) this.notify();
+    return assessment;
+  }
+
+  public verifyQualityAssessment(id: string, verifierName = 'Safety Officer', verifierRole: UserRole = 'admin'): FoodQualityAssessment {
+    let qa = this.getQualityAssessmentById(id);
+    if (!qa) {
+      throw new Error('Assessment not found');
+    }
+    qa = {
+      ...qa,
+      assessmentStatus: 'VERIFIED',
+      verifiedBy: verifierName,
+      verificationRole: verifierRole,
+      verificationStatus: 'VERIFIED',
+      verifiedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return this.saveQualityAssessment(qa);
+  }
+
+  public holdQualityAssessment(id: string, reason: string): FoodQualityAssessment {
+    let qa = this.getQualityAssessmentById(id);
+    if (!qa) {
+      throw new Error('Assessment not found');
+    }
+    const updatedRisks = qa.riskFactors.includes(reason) ? qa.riskFactors : [...qa.riskFactors, reason];
+    qa = {
+      ...qa,
+      assessmentStatus: 'SAFETY_HOLD',
+      riskFactors: updatedRisks,
+      aiExplanation: `Safety Hold Placed: ${reason}. Manual audit required before release.`,
+      updatedAt: new Date().toISOString(),
+    };
+    return this.saveQualityAssessment(qa);
+  }
+
+  public calculateLocalQualityAssessment(payload: any): FoodQualityAssessment {
+    const now = new Date();
+    const prepDate = new Date(payload.preparedAt || now.toISOString());
+    const elapsedMs = Math.max(0, now.getTime() - prepDate.getTime());
+    const foodAgeHours = Math.round((elapsedMs / (1000 * 60 * 60)) * 10) / 10;
+    const is24HourExceeded = foodAgeHours >= 24;
+
+    const totalWeight = Number(payload.totalWeight) || 5;
+    const unit = payload.weightUnit || 'kg';
+    const isKg = unit.toLowerCase().includes('kg');
+    const weightInKg = isKg ? totalWeight : totalWeight / 1000;
+
+    const minPortions = Math.max(1, Math.round(weightInKg / 0.35));
+    const maxPortions = Math.max(minPortions, Math.round(weightInKg / 0.22));
+
+    const risks: string[] = [];
+    const missing: string[] = [];
+
+    if (!payload.storageTemperature && payload.storageTemperature !== 0) {
+      missing.push('Storage temperature not recorded with probe');
+    }
+    if (is24HourExceeded) {
+      risks.push('Food age exceeds 24-hour baseline. Secondary sensor & organoleptic test mandatory.');
+    }
+    if (payload.packagingCondition === 'Damaged' || payload.packagingCondition === 'Open') {
+      risks.push('Packaging integrity compromised (open or damaged seal).');
+    }
+    if (payload.handlingStatus === 'Improper handling suspected') {
+      risks.push('Breach in hygienic handling reported.');
+    }
+
+    let status: any = 'VERIFIED';
+    let explanation = 'Based on the structured parameters provided, food appears suitable for verified redistribution.';
+
+    if (payload.handlingStatus === 'Improper handling suspected') {
+      status = 'SAFETY_HOLD';
+      explanation = 'Safety Hold applied due to reported hygienic custody breach. Dispatch restricted.';
+    } else if (foodAgeHours > 48) {
+      status = 'EXPIRED';
+      explanation = 'Food exceeds acceptable safe redistribution window. Ineligible for volunteer transport.';
+    } else if (risks.length > 0) {
+      status = is24HourExceeded ? 'CAUTION' : 'SAFETY_REVIEW';
+      explanation = `Caution: ${risks.join('; ')}. Additional physical inspection required.`;
+    }
+
+    const assessment: FoodQualityAssessment = {
+      id: `qa-${Date.now()}`,
+      donationId: payload.donationId || `don-temp-${Date.now()}`,
+      foodName: payload.foodName || 'Surplus Meal Batch',
+      category: payload.category || 'Cooked Meal',
+      foodType: payload.foodType || 'Vegetarian',
+      rawOrCooked: payload.rawOrCooked || 'Cooked',
+      totalWeight,
+      weightUnit: unit,
+      containerCount: payload.containerCount || 1,
+      containerType: payload.containerType || 'Stainless warmer',
+      ingredients: payload.ingredients || [],
+      preparedAt: payload.preparedAt || now.toISOString(),
+      assessedAt: now.toISOString(),
+      foodAgeHours,
+      is24HourExceeded,
+      storageMethod: payload.storageMethod || 'Hot Holding',
+      storageTemperature: payload.storageTemperature,
+      temperatureUnit: payload.temperatureUnit || 'C',
+      storageDurationHours: foodAgeHours,
+      packagingCondition: payload.packagingCondition || 'Sealed',
+      handlingStatus: payload.handlingStatus || 'Properly handled',
+      potentialAllergens: [],
+      estimatedServingsMin: minPortions,
+      estimatedServingsMax: maxPortions,
+      servingBreakdown: [
+        {
+          itemName: payload.foodName || 'Meal',
+          quantity: totalWeight,
+          unit,
+          estimatedPortionsMin: minPortions,
+          estimatedPortionsMax: maxPortions,
+        },
+      ],
+      servingEstimationAssumptions: [
+        `Assumed 250g–350g typical portion size for ${payload.category || 'Cooked Meal'}`,
+        'Calculated based on net edible mass',
+      ],
+      assessmentStatus: status,
+      riskFactors: risks,
+      missingInformation: missing,
+      aiExplanation: explanation,
+      isAiGenerated: false,
+      confidenceScore: 88,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+
+    return this.saveQualityAssessment(assessment);
+  }
+
   // --- Volunteer Offline Cache Sync ---
   public syncVolunteerOfflineCache(volunteerIdOrName: string) {
     const assigned = this.donations.filter(
@@ -1012,6 +1247,7 @@ class AppStore {
     localStorage.removeItem(STORAGE_KEYS.NEEDS);
     localStorage.removeItem(STORAGE_KEYS.AUDIT);
     localStorage.removeItem(STORAGE_KEYS.ANALYTICS);
+    localStorage.removeItem(STORAGE_KEYS.QUALITY_ASSESSMENTS);
 
     this.users = [...INITIAL_USERS];
     this.currentUser = this.users[0];
@@ -1020,6 +1256,7 @@ class AppStore {
     this.donations = [...INITIAL_DONATIONS];
     this.notifications = [...INITIAL_NOTIFICATIONS];
     this.analytics = { ...INITIAL_ANALYTICS };
+    this.qualityAssessments = [];
 
     this.notify();
   }

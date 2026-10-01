@@ -26,6 +26,7 @@ interface CommandPaletteProps {
   onOpenSimulation: () => void;
   onOpenPresentation: () => void;
   onOpenJuryQa: () => void;
+  onOpenAiVerification?: () => void;
   onResetDemo: () => void;
   isDark: boolean;
   onToggleDark: () => void;
@@ -39,6 +40,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenSimulation,
   onOpenPresentation,
   onOpenJuryQa,
+  onOpenAiVerification,
   onResetDemo,
   isDark,
   onToggleDark,
@@ -73,6 +75,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       action: () => {
         onClose();
         onOpenDonationWizard();
+      },
+    },
+    {
+      id: 'ai-verification',
+      title: 'AI Food Verification & Freshness Assistant (FSSAI Check)',
+      category: 'Intelligence',
+      icon: ShieldCheck,
+      action: () => {
+        onClose();
+        if (onOpenAiVerification) onOpenAiVerification();
       },
     },
     {
@@ -204,8 +216,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or search (e.g. Donate, Map, Courier, Simulation)..."
-            className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
+            placeholder="Type a command or search (e.g. Donate, AI Verify, Map, Courier)..."
+            className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 placeholder:opacity-100 font-medium outline-none"
           />
           <kbd className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-mono font-semibold text-gray-400 bg-gray-100 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">
             ESC

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* Leaflet map styles and z-index fixes */
 .leaflet-container {
   width: 100%;
@@ -24,31 +30,27 @@
 ::placeholder {
   color: #64748b !important; /* slate-500 */
   opacity: 1 !important;
-  font-weight: 400 !important;
-  font-size: 0.875rem !important;
 }
 
 input::placeholder,
 textarea::placeholder {
   color: #64748b !important; /* slate-500 */
   opacity: 1 !important;
-  font-weight: 400 !important;
-  font-size: 0.875rem !important;
 }
 
-/* Dark mode placeholder styling */
+/* Dark mode inputs placeholder styling */
 .dark input::placeholder,
 .dark textarea::placeholder {
   color: #94a3b8 !important; /* slate-400 */
   opacity: 1 !important;
 }
 
-/* Dark container or backdrop placeholder styling */
-.bg-white\/10 input::placeholder,
-.bg-white\/10 textarea::placeholder,
-.text-white input::placeholder,
-.text-white textarea::placeholder {
-  color: #cbd5e1 !important; /* slate-300 */
+/* Ensure inputs on white backgrounds in dark mode keep high contrast */
+.dark .bg-white input::placeholder,
+.dark .bg-white textarea::placeholder,
+.dark input.bg-white::placeholder,
+.dark textarea.bg-white::placeholder {
+  color: #64748b !important;
   opacity: 1 !important;
 }
 

@@ -130,6 +130,40 @@ export const QrVerificationModal: React.FC<QrVerificationModalProps> = ({
             </div>
           </div>
 
+          {/* QR & Pass Download Actions */}
+          <div className="flex items-center justify-center gap-2 pt-1">
+            {qrDataUrl && (
+              <a
+                href={qrDataUrl}
+                download={`foodbridge-qr-${donation.id.slice(0, 8)}.png`}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-bold flex items-center space-x-1.5 transition-colors shadow-2xs"
+                title="Download QR code image for print or offline sharing"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download QR (.png)</span>
+              </a>
+            )}
+            <button
+              onClick={() => {
+                const pass = `========================================\nFOODBRIDGE DIGITAL CUSTODY PASS\nStage: ${mode === 'pickup' ? 'PICKUP HANDSHAKE' : 'DELIVERY HANDOVER'}\n========================================\nDonation ID: ${donation.id}\nFood Batch: ${donation.food_name}\nQuantity: ${donation.quantity} ${donation.unit} (~${donation.estimated_meals} portions)\nPIN: ${activeOtp}\nDonor: ${donation.donor_name}\nAddress: ${donation.pickup_address}\nShelter: ${donation.assigned_ngo_name || 'Assigned Shelter'}\nTimestamp: ${new Date().toISOString()}\n========================================\nPresent this slip or QR code at pickup/delivery dock.`;
+                const blob = new Blob([pass], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `gate-pass-${donation.id.slice(0, 8)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-700 text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+              title="Download text gate pass"
+            >
+              <Download className="w-3.5 h-3.5 text-teal-600" />
+              <span>Gate Pass (.txt)</span>
+            </button>
+          </div>
+
           {/* Secure Dual OTP Code Display */}
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">

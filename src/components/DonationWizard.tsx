@@ -25,6 +25,7 @@ interface DonationWizardProps {
   onClose: () => void;
   onSuccess: (donationId: string) => void;
   initialData?: Partial<any>;
+  onOpenQualityAssurance?: () => void;
 }
 
 export const DonationWizard: React.FC<DonationWizardProps> = ({
@@ -32,6 +33,7 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
   onClose,
   onSuccess,
   initialData,
+  onOpenQualityAssurance,
 }) => {
   const [step, setStep] = useState<number>(1);
 
@@ -148,7 +150,7 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden my-8 flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 dark:border-slate-800 overflow-hidden my-8 flex flex-col max-h-[90vh] text-gray-900 dark:text-white">
         {/* Wizard Header */}
         <div className="bg-gradient-to-r from-emerald-800 to-teal-800 text-white p-6 relative">
           <button
@@ -197,30 +199,51 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
           {/* STEP 1: FOOD DETAILS */}
           {step === 1 && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-gray-900 border-b pb-2 flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-slate-800 pb-2 flex items-center space-x-2">
                 <Utensils className="w-4 h-4 text-emerald-600" />
                 <span>Step 1: Food Description & Quantities</span>
               </h3>
 
+              {onOpenQualityAssurance && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="text-xs text-emerald-950 dark:text-emerald-200">
+                      Want to verify freshness, ingredients & estimate servings with AI first?
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenQualityAssurance();
+                    }}
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0"
+                  >
+                    Open Food QA →
+                  </button>
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Food Item Name *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Food Item Name *</label>
                 <input
                   type="text"
                   value={foodName}
                   onChange={(e) => setFoodName(e.target.value)}
                   placeholder="e.g. Vegetable Biryani, 80 Chapatis, Dal Khichdi"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white text-gray-900 placeholder:text-gray-500 placeholder:opacity-100 placeholder:font-normal font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 placeholder:opacity-100 font-medium"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Category *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Category *</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as FoodCategory)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white text-gray-900 font-medium"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-medium"
                   >
                     <option value="Cooked Meal">Cooked Meal</option>
                     <option value="Raw Food">Raw Food / Grains</option>
@@ -234,11 +257,11 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Food Type / Diet *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Food Type / Diet *</label>
                   <select
                     value={foodType}
                     onChange={(e) => setFoodType(e.target.value as FoodType)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white text-gray-900 font-medium"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-medium"
                   >
                     <option value="Vegetarian">Vegetarian (Pure Veg)</option>
                     <option value="Vegan">Vegan (100% Plant-based)</option>
@@ -249,22 +272,22 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Quantity *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Quantity *</label>
                   <input
                     type="number"
                     min="1"
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm font-semibold bg-white text-gray-900"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm font-semibold bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unit *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Unit *</label>
                   <select
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white text-gray-900 font-medium"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-medium"
                   >
                     <option value="Meals">Meals / Portions</option>
                     <option value="kg">Kilograms (kg)</option>
@@ -275,24 +298,24 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Dietary Labels & Allergens</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Dietary Labels & Allergens</label>
                 <input
                   type="text"
                   value={dietaryLabel}
                   onChange={(e) => setDietaryLabel(e.target.value)}
                   placeholder="e.g. Vegetarian, Nut-free, Mild spice"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white text-gray-900 placeholder:text-gray-500 placeholder:opacity-100 placeholder:font-normal font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 placeholder:opacity-100 font-medium"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Detailed Description</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Detailed Description</label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Provide preparation details, contents, and handling requirements"
-                  className="w-full px-3.5 py-2 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white text-gray-900 placeholder:text-gray-500 placeholder:opacity-100 placeholder:font-normal font-medium"
+                  className="w-full px-3.5 py-2 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 placeholder:opacity-100 font-medium"
                 />
               </div>
             </div>
@@ -301,17 +324,17 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
           {/* STEP 2: TIME & SAFETY */}
           {step === 2 && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-gray-900 border-b pb-2 flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-slate-800 pb-2 flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-emerald-600" />
                 <span>Step 2: Timings, Temperature & Food Safety Declaration</span>
               </h3>
 
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start space-x-2.5 text-xs">
+              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-start space-x-2.5 text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold">Food Safety Requirement:</span>
-                  <p className="mt-0.5 text-amber-800">
-                    "Only safe, uncontaminated and legally distributable food should be submitted." Hot food must be held
+                  <p className="mt-0.5 text-amber-800 dark:text-amber-300">
+                    &quot;Only safe, uncontaminated and legally distributable food should be submitted.&quot; Hot food must be held
                     above 60°C or chilled food below 5°C.
                   </p>
                 </div>
@@ -319,33 +342,33 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Preparation Date & Time *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Preparation Date & Time *</label>
                   <input
                     type="datetime-local"
                     value={prepTime}
                     onChange={(e) => setPrepTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-mono bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Expected Safe Expiry Time *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Expected Safe Expiry Time *</label>
                   <input
                     type="datetime-local"
                     value={expiryTime}
                     onChange={(e) => setExpiryTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-mono bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Current Storage Method</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Current Storage Method</label>
                   <select
                     value={storageMethod}
                     onChange={(e) => setStorageMethod(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-medium"
                   >
                     <option value="Insulated hot-food warmer">Insulated hot-food warmer (≥60°C)</option>
                     <option value="Commercial refrigeration">Commercial refrigeration (≤4°C)</option>
@@ -355,13 +378,13 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Food Temperature (°C)</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Food Temperature (°C)</label>
                   <div className="relative">
                     <input
                       type="number"
                       value={temperatureC}
                       onChange={(e) => setTemperatureC(parseFloat(e.target.value) || 0)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-semibold"
                     />
                     <span className="absolute right-3 top-2.5 text-xs text-gray-400">°C</span>
                   </div>
@@ -454,36 +477,36 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Pickup Address *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Pickup Address *</label>
                 <input
                   type="text"
                   value={pickupAddress}
                   onChange={(e) => setPickupAddress(e.target.value)}
                   placeholder="Full street address and gate instructions"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 placeholder:opacity-100 font-medium"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Latitude</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Latitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={latitude}
                     onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-mono"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 dark:border-slate-700 text-xs font-mono bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-semibold"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Longitude</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Longitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={longitude}
                     onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-mono"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 dark:border-slate-700 text-xs font-mono bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-semibold"
                   />
                 </div>
               </div>
@@ -547,7 +570,7 @@ export const DonationWizard: React.FC<DonationWizardProps> = ({
         </div>
 
         {/* Wizard Footer Controls */}
-        <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+        <div className="p-4 sm:p-5 bg-gray-50 dark:bg-slate-800/90 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
           {step > 1 ? (
             <button
               onClick={handleBack}

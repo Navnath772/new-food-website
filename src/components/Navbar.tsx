@@ -19,6 +19,8 @@ import {
   Command,
   Wifi,
   WifiOff,
+  Cpu,
+  Truck,
 } from 'lucide-react';
 import { User, UserRole } from '../types/index.ts';
 import { adminApi, appStore } from '../services/api.ts';
@@ -31,9 +33,11 @@ interface NavbarProps {
   onOpenSimulation: () => void;
   onOpenPresentation: () => void;
   onOpenJuryQa: () => void;
+  onOpenTrackOrder: () => void;
   onOpenCommandPalette: () => void;
   onOpenAuthModal: () => void;
   onOpenNotificationModal: () => void;
+  onOpenAiVerification?: () => void;
   isDark: boolean;
   onToggleDark: () => void;
   onResetDemo: () => void;
@@ -46,9 +50,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSimulation,
   onOpenPresentation,
   onOpenJuryQa,
+  onOpenTrackOrder,
   onOpenCommandPalette,
   onOpenAuthModal,
   onOpenNotificationModal,
+  onOpenAiVerification,
   isDark,
   onToggleDark,
   onResetDemo,
@@ -129,6 +135,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               Donor Hub
             </button>
             <button
+              onClick={() => onSelectTab('qa')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center space-x-1.5 ${
+                currentTab === 'qa'
+                  ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-emerald-600 hover:bg-gray-50'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Food QA</span>
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded-full font-bold">
+                AI
+              </span>
+            </button>
+            <button
               onClick={() => onSelectTab('ngo')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 currentTab === 'ngo'
@@ -182,11 +202,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Action CTAs, Modals & User Switcher */}
-          <div className="flex items-center space-x-2 sm:space-x-2.5">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5">
+            {/* AI Food Verification Assistant Trigger */}
+            {onOpenAiVerification && (
+              <button
+                onClick={onOpenAiVerification}
+                className="hidden sm:flex items-center space-x-1 px-2.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-800 text-[11px] font-bold hover:bg-teal-100 transition-colors shadow-2xs"
+                title="AI Smart Food Quality & Thermal Safety Verification Assistant"
+              >
+                <Cpu className="w-3.5 h-3.5 text-teal-600 animate-pulse" />
+                <span>AI Verify</span>
+              </button>
+            )}
+
             {/* Online / Offline Simulation Toggle Button per Prompt #5 */}
             <button
               onClick={toggleSimulatedOffline}
-              className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all shadow-2xs ${
+              className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all shadow-2xs ${
                 isOnline
                   ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100'
                   : 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100'
@@ -200,12 +232,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               {isOnline ? (
                 <>
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-semibold">Online</span>
+                  <span className="font-semibold hidden xs:inline sm:inline">Online</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="font-bold">Offline Mode</span>
+                  <span className="font-bold">Offline</span>
                 </>
               )}
             </button>
@@ -243,6 +275,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {unreadNotifs.length}
                 </span>
               )}
+            </button>
+
+            {/* Track Order 7-Stage Button */}
+            <button
+              onClick={onOpenTrackOrder}
+              className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-bold transition-all shadow-2xs"
+              title="Track Active Rescue Order (7-Stage Audit Protocol)"
+            >
+              <Truck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Track Order</span>
             </button>
 
             {/* Simulation button */}

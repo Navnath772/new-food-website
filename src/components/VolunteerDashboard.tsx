@@ -32,9 +32,13 @@ import confetti from 'canvas-confetti';
 
 interface VolunteerDashboardProps {
   onNavigateToMap: (donationId?: string) => void;
+  onOpenQualityAssurance?: () => void;
 }
 
-export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({ onNavigateToMap }) => {
+export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
+  onNavigateToMap,
+  onOpenQualityAssurance,
+}) => {
   const [donations, setDonations] = useState<FoodDonation[]>(appStore.getDonations());
   const [volunteers, setVolunteers] = useState<Volunteer[]>(appStore.getVolunteers());
   const [cachedPickups, setCachedPickups] = useState<OfflineCachedPickup[]>(
@@ -221,8 +225,19 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({ onNaviga
           </div>
         </div>
 
-        {/* Badges Display */}
-        <div className="flex items-center space-x-1.5 flex-wrap">
+        {/* Badges & Food QA Action */}
+        <div className="flex items-center space-x-2 flex-wrap">
+          {onOpenQualityAssurance && (
+            <button
+              onClick={onOpenQualityAssurance}
+              className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 font-bold text-xs flex items-center space-x-1.5 transition-colors shadow-2xs"
+              title="Open Food Quality Assurance Center"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Food QA Center</span>
+            </button>
+          )}
+
           {currentVolunteer.badges.map((b) => (
             <span
               key={b}

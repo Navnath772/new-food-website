@@ -41,11 +41,15 @@ import { FoodRescueCertificateModal } from './FoodRescueCertificateModal.tsx';
 interface DonorDashboardProps {
   onOpenDonationWizard: (initialData?: any) => void;
   onOpenLiveMapForDonation: (donationId: string) => void;
+  onOpenAiVerification?: (payload?: any) => void;
+  onOpenQualityAssurance?: () => void;
 }
 
 export const DonorDashboard: React.FC<DonorDashboardProps> = ({
   onOpenDonationWizard,
   onOpenLiveMapForDonation,
+  onOpenAiVerification,
+  onOpenQualityAssurance,
 }) => {
   const [donations, setDonations] = useState<FoodDonation[]>(appStore.getDonations());
   const [communityNeeds, setCommunityNeeds] = useState<CommunityNeed[]>(appStore.getCommunityNeeds());
@@ -179,6 +183,28 @@ export const DonorDashboard: React.FC<DonorDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenQualityAssurance && (
+            <button
+              onClick={onOpenQualityAssurance}
+              className="px-4 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 font-bold text-xs flex items-center space-x-1.5 transition-colors shadow-2xs"
+              title="Open Food Quality Assurance Center"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Food QA Center</span>
+            </button>
+          )}
+
+          {onOpenAiVerification && (
+            <button
+              onClick={() => onOpenAiVerification()}
+              className="px-4 py-2.5 rounded-2xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-300 hover:bg-teal-100 font-bold text-xs flex items-center space-x-1.5 transition-colors"
+              title="Launch AI Food Verification Assistant"
+            >
+              <Cpu className="w-4 h-4 text-teal-600 animate-pulse" />
+              <span>AI Quality Check</span>
+            </button>
+          )}
+
           <button
             onClick={() => setShowCertificate(true)}
             className="px-4 py-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100 font-bold text-xs flex items-center space-x-1.5 transition-colors"
@@ -441,6 +467,22 @@ export const DonorDashboard: React.FC<DonorDashboardProps> = ({
                 onOpenLedgerModal={() => setActiveLedgerDonation(donation)}
                 onOpenQrModal={() => setActiveQrDonation(donation)}
                 onOpenSafetyModal={() => setActiveSafetyDonation(donation)}
+                onOpenAiVerification={
+                  onOpenAiVerification
+                    ? () =>
+                        onOpenAiVerification({
+                          foodName: donation.food_name,
+                          category: donation.food_category,
+                          foodType: donation.food_type,
+                          quantity: donation.quantity,
+                          unit: donation.unit,
+                          preparationTime: donation.preparation_time,
+                          storageMethod: donation.storage_method || 'Insulated container',
+                          temperatureC: donation.temperature_c,
+                          dietaryNotes: donation.dietary_label,
+                        })
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -603,6 +645,7 @@ interface DonationCardProps {
   onOpenLedgerModal: () => void;
   onOpenQrModal: () => void;
   onOpenSafetyModal: () => void;
+  onOpenAiVerification?: () => void;
 }
 
 const DonationCard: React.FC<DonationCardProps> = ({
@@ -613,6 +656,7 @@ const DonationCard: React.FC<DonationCardProps> = ({
   onOpenLedgerModal,
   onOpenQrModal,
   onOpenSafetyModal,
+  onOpenAiVerification,
 }) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [windowState, setWindowState] = useState<'SAFE' | 'WARNING' | 'CRITICAL' | 'EXPIRED'>('SAFE');
@@ -757,6 +801,17 @@ const DonationCard: React.FC<DonationCardProps> = ({
       {/* Action Buttons Row */}
       <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-slate-800 text-xs font-semibold">
         <div className="flex items-center gap-1.5">
+          {onOpenAiVerification && (
+            <button
+              onClick={onOpenAiVerification}
+              className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 flex items-center space-x-1 transition-colors"
+              title="Run AI Freshness & Safety Verification"
+            >
+              <Cpu className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+              <span>AI Verify</span>
+            </button>
+          )}
+
           <button
             onClick={onViewMatches}
             className="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 text-teal-800 dark:text-teal-300 flex items-center space-x-1 transition-colors"
