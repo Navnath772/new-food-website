@@ -1,0 +1,6 @@
+{
+  "name": "FoodBridge AI - Smart Surplus Food Redistribution",
+  "description": "Rescue food, connect communities, and reduce hunger with AI matching, food safety verification, live tracking, and SDG 2 impact analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
